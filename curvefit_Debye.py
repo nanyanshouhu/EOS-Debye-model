@@ -10,71 +10,73 @@ import pandas as pd
 from scipy.integrate import quad
 
 s = 0.617
-NA = 6.02e23
+NA = 6.02e23  # Avogadro's number
 A = 231.04
 with open('POSCAR', 'r') as f:
     lines = f.readlines()
 
-# 获取元素和数量信息
+# Get element and quantity information
 elements = lines[5].split()
 element_counts = [int(count) for count in lines[6].split()]
 
-# 字典中包含了元素的原子质量
+# A dictionary that contains the atomic masses of elements
 MM_of_Elements = {'H': 1.00794, 'He': 4.002602, 'Li': 6.941, 'Be': 9.012182, 'B': 10.811, 'C': 12.0107, 'N': 14.0067,
-              'O': 15.9994, 'F': 18.9984032, 'Ne': 20.1797, 'Na': 22.98976928, 'Mg': 24.305, 'Al': 26.9815386,
-              'Si': 28.0855, 'P': 30.973762, 'S': 32.065, 'Cl': 35.453, 'Ar': 39.948, 'K': 39.0983, 'Ca': 40.078,
-              'Sc': 44.955912, 'Ti': 47.867, 'V': 50.9415, 'Cr': 51.9961, 'Mn': 54.938045,
-              'Fe': 55.845, 'Co': 58.933195, 'Ni': 58.6934, 'Cu': 63.546, 'Zn': 65.409, 'Ga': 69.723, 'Ge': 72.64,
-              'As': 74.9216, 'Se': 78.96, 'Br': 79.904, 'Kr': 83.798, 'Rb': 85.4678, 'Sr': 87.62, 'Y': 88.90585,
-              'Zr': 91.224, 'Nb': 92.90638, 'Mo': 95.94, 'Tc': 98.9063, 'Ru': 101.07, 'Rh': 102.9055, 'Pd': 106.42,
-              'Ag': 107.8682, 'Cd': 112.411, 'In': 114.818, 'Sn': 118.71, 'Sb': 121.760, 'Te': 127.6,
-              'I': 126.90447, 'Xe': 131.293, 'Cs': 132.9054519, 'Ba': 137.327, 'La': 138.90547, 'Ce': 140.116,
-              'Pr': 140.90465, 'Nd': 144.242, 'Pm': 146.9151, 'Sm': 150.36, 'Eu': 151.964, 'Gd': 157.25,
-              'Tb': 158.92535, 'Dy': 162.5, 'Ho': 164.93032, 'Er': 167.259, 'Tm': 168.93421, 'Yb': 173.04,
-              'Lu': 174.967, 'Hf': 178.49, 'Ta': 180.9479, 'W': 183.84, 'Re': 186.207, 'Os': 190.23, 'Ir': 192.217,
-              'Pt': 195.084, 'Au': 196.966569, 'Hg': 200.59, 'Tl': 204.3833, 'Pb': 207.2, 'Bi': 208.9804,
-              'Po': 208.9824, 'At': 209.9871, 'Rn': 222.0176, 'Fr': 223.0197, 'Ra': 226.0254, 'Ac': 227.0278,
-              'Th': 232.03806, 'Pa': 231.03588, 'U': 238.02891, 'Np': 237.0482, 'Pu': 244.0642, 'Am': 243.0614,
-              'Cm': 247.0703, 'Bk': 247.0703, 'Cf': 251.0796, 'Es': 252.0829, 'Fm': 257.0951, 'Md': 258.0951,
-              'No': 259.1009, 'Lr': 262, 'Rf': 267, 'Db': 268, 'Sg': 271, 'Bh': 270, 'Hs': 269, 'Mt': 278,
-              'Ds': 281, 'Rg': 281, 'Cn': 285, 'Nh': 284, 'Fl': 289, 'Mc': 289, 'Lv': 292, 'Ts': 294, 'Og': 294,
-              'ZERO': 0}
+                  'O': 15.9994, 'F': 18.9984032, 'Ne': 20.1797, 'Na': 22.98976928, 'Mg': 24.305, 'Al': 26.9815386,
+                  'Si': 28.0855, 'P': 30.973762, 'S': 32.065, 'Cl': 35.453, 'Ar': 39.948, 'K': 39.0983, 'Ca': 40.078,
+                  'Sc': 44.955912, 'Ti': 47.867, 'V': 50.9415, 'Cr': 51.9961, 'Mn': 54.938045,
+                  'Fe': 55.845, 'Co': 58.933195, 'Ni': 58.6934, 'Cu': 63.546, 'Zn': 65.409, 'Ga': 69.723, 'Ge': 72.64,
+                  'As': 74.9216, 'Se': 78.96, 'Br': 79.904, 'Kr': 83.798, 'Rb': 85.4678, 'Sr': 87.62, 'Y': 88.90585,
+                  'Zr': 91.224, 'Nb': 92.90638, 'Mo': 95.94, 'Tc': 98.9063, 'Ru': 101.07, 'Rh': 102.9055, 'Pd': 106.42,
+                  'Ag': 107.8682, 'Cd': 112.411, 'In': 114.818, 'Sn': 118.71, 'Sb': 121.760, 'Te': 127.6,
+                  'I': 126.90447, 'Xe': 131.293, 'Cs': 132.9054519, 'Ba': 137.327, 'La': 138.90547, 'Ce': 140.116,
+                  'Pr': 140.90465, 'Nd': 144.242, 'Pm': 146.9151, 'Sm': 150.36, 'Eu': 151.964, 'Gd': 157.25,
+                  'Tb': 158.92535, 'Dy': 162.5, 'Ho': 164.93032, 'Er': 167.259, 'Tm': 168.93421, 'Yb': 173.04,
+                  'Lu': 174.967, 'Hf': 178.49, 'Ta': 180.9479, 'W': 183.84, 'Re': 186.207, 'Os': 190.23, 'Ir': 192.217,
+                  'Pt': 195.084, 'Au': 196.966569, 'Hg': 200.59, 'Tl': 204.3833, 'Pb': 207.2, 'Bi': 208.9804,
+                  'Po': 208.9824, 'At': 209.9871, 'Rn': 222.0176, 'Fr': 223.0197, 'Ra': 226.0254, 'Ac': 227.0278,
+                  'Th': 232.03806, 'Pa': 231.03588, 'U': 238.02891, 'Np': 237.0482, 'Pu': 244.0642, 'Am': 243.0614,
+                  'Cm': 247.0703, 'Bk': 247.0703, 'Cf': 251.0796, 'Es': 252.0829, 'Fm': 257.0951, 'Md': 258.0951,
+                  'No': 259.1009, 'Lr': 262, 'Rf': 267, 'Db': 268, 'Sg': 271, 'Bh': 270, 'Hs': 269, 'Mt': 278,
+                  'Ds': 281, 'Rg': 281, 'Cn': 285, 'Nh': 284, 'Fl': 289, 'Mc': 289, 'Lv': 292, 'Ts': 294, 'Og': 294,
+                  'ZERO': 0}
 
-# 计算总质量
+# Calculate the total mass
 total_mass = sum([MM_of_Elements[element] * count for element, count in zip(elements, element_counts)])
 
-# 计算平均每个原子的质量
+# Calculate the average mass per atom
 average_mass_per_atom = total_mass / sum(element_counts)
 
 print("average:", average_mass_per_atom)
-N=sum(element_counts) # number of atoms
+N = sum(element_counts)  # Number of atoms
 print(N)
-M = average_mass_per_atom # Specify the value of M1 per atom 
-h=1.055e-34
-# 定义计算离散点导数的函数
-def cal_deriv(x, y):                  # x, y的类型均为列表
-    diff_x = []                       # 用来存储x列表中的两数之差
+M = average_mass_per_atom  # Specify the value of M1 per atom
+h = 1.055e-34
+
+# Define a function to calculate discrete point derivatives
+def cal_deriv(x, y):                  # x and y are both lists
+    diff_x = []                       # Used to store the difference between two numbers in the x list
     for i, j in zip(x[0::], x[1::]):
         diff_x.append(j - i)
 
-    diff_y = []                       # 用来存储y列表中的两数之差
+    diff_y = []                       # Used to store the difference between two numbers in the y list
     for i, j in zip(y[0::], y[1::]):
         diff_y.append(j - i)
 
-    slopes = []                       # 用来存储斜率
+    slopes = []                       # Used to store the slopes
     for i in range(len(diff_y)):
         slopes.append(diff_y[i] / diff_x[i])
 
-    deriv = []                        # 用来存储一阶导数
+    deriv = []                        # Used to store the first derivative
     for i, j in zip(slopes[0::], slopes[1::]):
-        deriv.append((0.5 * (i + j)))  # 根据离散点导数的定义，计算并存储结果
-    deriv.insert(0, slopes[0])        # (左)端点的导数即为与其最近点的斜率
-    deriv.append(slopes[-1])          # (右)端点的导数即为与其最近点的斜率
+        deriv.append((0.5 * (i + j)))  # Calculate and store the result according to the definition of the discrete point derivative
+    deriv.insert(0, slopes[0])        # The derivative at the (left) end is the slope with its nearest point
+    deriv.append(slopes[-1])          # The derivative at the (right) end is the slope with its nearest point
 
-    for i in deriv:                   # 打印结果，方便检查，调用时也可注释掉
+    for i in deriv:                   # Print the result for easy checking (can be commented out when calling)
         print(i)
 
-    return deriv                      # 返回存储一阶导数结果的列表
+    return deriv                      # Return the list storing the first derivative results
+
 def cal_second_deriv(x, y):
     n = len(x)
     second_deriv = []
@@ -118,10 +120,19 @@ def read_data(filename):
     data = np.loadtxt("curvefit.txt")     
     return data[:,1], data[:,2] 
 def eos_murnaghan(vol, E0, B0, BP, V0):
-    """ imput the volumes and equation and return the energy 
-    Birch-Murnaghan equation：Phys. Rev. B 1983, 28 (10), 5480–5486.
-    """
-    return E0 + B0*vol/BP*(((V0/vol)**BP)/(BP-1)+1) - V0*B0/(BP-1)
+    # First term in the equation
+    term1 = (4 * B0 * V0) / (BP - 1)**2
+    
+    # Second term in the equation
+    term2 = 1 - (3 / 2) * (BP - 1) * (1 - (vol / V0)**(1 / 3))
+    
+    # Exponential term
+    exp_term = np.exp((3 / 2) * (BP - 1) * (1 - (vol / V0)**(1 / 3)))
+    
+    # Energy calculation
+    E = E0 + term1 - term1 * term2 * exp_term
+    
+    return E
 def fit_murnaghan(volume, energy):
     """ fittint Murnaghan equation，and return the optimized parameters 
     """
