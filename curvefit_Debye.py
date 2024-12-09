@@ -199,8 +199,9 @@ def fit_and_plot(filename):
     I=np.array(Data[:,0])
     best_par_vf_list=[]
     for T in np.linspace(1e-10,1600,161):
-        x=2/3
-        gamma = (1 + BP) / 2 - x
+        g_0=1.5
+        sigma=sigma=1.27262+1.67772*np.log(V0 / V)
+        gamma = g_0*(V0/V)**sigma 
         D = s * A * (V0 ** (1 / 6)) * ((B0 / M) ** (1 / 2)) * ((V0 / V) ** gamma)
         D = np.ravel(D) 
         Fvib=(9 / 8) * kB_j * D + kB_j * T *(3 * np.log(1 - np.exp(-D / T)) - debye_function(D / T))
@@ -302,7 +303,9 @@ def calculate_Fvib(filename):
     for item in best_par_vf:
         T = item[0]
         V = item[1]
-        gamma = (1 + BP) / 2 - 2 / 3
+        g_0=1.5
+        sigma=1.27262+1.67772*np.log(V0 / V)
+        gamma = g_0*(V0/V)**sigma
         kB_j=8.617333262145e-5 
         D = s * A * (V0 ** (1 / 6)) * ((B0 / M) ** (1 / 2)) * ((V0 / V) ** gamma)
         D = np.ravel(D)
@@ -331,6 +334,8 @@ V=result_final['V'].to_list()
 Fv=result_final['Fv'].to_list()
 Sv=result_final['Sv'].to_list()
 Cv=result_final['Cv'].to_list()
+dVdT = cal_deriv(T, V)
+CTE = [dVdT[i] / V[i] for i in range(len(V))]
 fig, axs = plt.subplots(2, 3, figsize=(10, 8))
 fig.tight_layout(pad=4.0)
 
@@ -375,14 +380,19 @@ axs[1, 1].tick_params(labelsize=10)
 axs[1, 1].tick_params(axis='x', labelsize=10)
 axs[1, 1].tick_params(axis='y', labelsize=10)
 
-axs[1, 2].remove()
+# Plot T vs CTE
+axs[1, 2].plot(T, CTE, '-b', label='CTE', linewidth=3)
+axs[1, 2].set_xlabel("Temperature (K)", fontsize=12)
+axs[1, 2].set_ylabel("CTE (1/K)", fontsize=12)
+axs[1, 2].tick_params(labelsize=10)
 
 axs[0, 0].legend(frameon=False)
 axs[0, 1].legend(frameon=False)
 axs[0, 2].legend(frameon=False)
 axs[1, 0].legend(frameon=False)
 axs[1, 1].legend(frameon=False)
-plt.show()
+axs[1, 1].legend(frameon=False)
+plt.savefig('E-V_Debye.png', format='png', dpi=330)
 
 print("\n# Fit parameters and parameter errors from curve_fit method :")
 print("pfit = ", pfit)
