@@ -72,8 +72,8 @@ def cal_deriv(x, y):                  # x and y are both lists
     deriv.insert(0, slopes[0])        # The derivative at the (left) end is the slope with its nearest point
     deriv.append(slopes[-1])          # The derivative at the (right) end is the slope with its nearest point
 
-    for i in deriv:                   # Print the result for easy checking (can be commented out when calling)
-        print(i)
+    #for i in deriv:                   # Print the result for easy checking (can be commented out when calling)
+    #    print(i)
 
     return deriv                      # Return the list storing the first derivative results
 
@@ -198,16 +198,21 @@ def fit_and_plot(filename):
     kB_j=8.617333262145e-5 
     I=np.array(Data[:,0])
     best_par_vf_list=[]
-    for T in np.linspace(1e-10,1600,161):
-        g_0=1.5
-        sigma=sigma=1.27262+1.67772*np.log(V0 / V)
-        gamma = g_0*(V0/V)**sigma 
+    for T in np.linspace(0, 1600, 161):  # Start from 0
+        g_0 = 1.5
+        sigma = 1.27262 + 1.67772 * np.log(V0 / V)
+        gamma = g_0 * (V0 / V) ** sigma
         D = s * A * (V0 ** (1 / 6)) * ((B0 / M) ** (1 / 2)) * ((V0 / V) ** gamma)
-        D = np.ravel(D) 
-        Fvib=(9 / 8) * kB_j * D + kB_j * T *(3 * np.log(1 - np.exp(-D / T)) - debye_function(D / T))
-        F= E+Fvib
+        D = np.ravel(D)
+    
+        # Avoid division by zero for T=0
+        T_safe = max(T, 1e-10)  # Use T_safe for calculations, ensuring it's never exactly 0
+        Fvib = (9 / 8) * kB_j * D + kB_j * T_safe * (
+            3 * np.log(1 - np.exp(-D / T_safe)) - debye_function(D / T_safe)
+        )
+        F = E + Fvib
         best_par_vf = fit_murnaghan(V, F)
-        best_par_vf_list.append([T,best_par_vf[3],best_par_vf[0]])
+        best_par_vf_list.append([T, best_par_vf[3], best_par_vf[0]])
     #for i, d in zip(I,D):
     #    wD = (d * kB) / (h*2*np.pi)
     #    w = np.linspace(0, wD, 3000)
@@ -295,38 +300,49 @@ def calculate_Fvib(filename):
     volume, energy = read_data(filename) 
     best_par = fit_murnaghan(volume, energy)
     best_par, m_volume, m_energy, volume, energy, best_par_vf = fit_and_plot(filename)
-    E0=best_par[0]
-    V0=best_par[3]
-    B0=best_par[1]*160.217
-    BP=best_par[2]
-    result_list=[]
-    for item in best_par_vf:
+    E0 = best_par[0]
+    V0 = best_par[3]
+    B0 = best_par[1] * 160.217
+    BP = best_par[2]
+    result_list = []
+
+    previous_V = None  # Used to calculate dVdT
+    previous_T = None  # Used to calculate dVdT
+
+    for idx, item in enumerate(best_par_vf):
         T = item[0]
         V = item[1]
-        g_0=1.5
-        sigma=1.27262+1.67772*np.log(V0 / V)
-        gamma = g_0*(V0/V)**sigma
-        kB_j=8.617333262145e-5 
+        g_0 = 1.5
+        sigma = 1.27262 + 1.67772 * np.log(V0 / V)
+        gamma = g_0 * (V0 / V) ** sigma
+        kB_j = 8.617333262145e-5
         D = s * A * (V0 ** (1 / 6)) * ((B0 / M) ** (1 / 2)) * ((V0 / V) ** gamma)
         D = np.ravel(D)
-        print(D)
         # Calculate Fv
-        Fd=(9 / 8) * kB_j * D + kB_j * T *(3 * np.log(1 - np.exp(-D / T)) - debye_function(D / T))
-        Fv = E0+(9 / 8) * kB_j * D + kB_j * T *(3 * np.log(1 - np.exp(-D / T)) - debye_function(D / T))
-        Sv=kB_j*(-3*np.log(1 - np.exp(-D / T)) +4 * debye_function(D / T))*96450
-        Cv=9*kB_j*(T/D)**3*debye_cv_function(D/T)*96450
-        Fv_str = ', '.join(str(num) for num in Fv)
-        Fd_str = ', '.join(str(num) for num in abs(Fd))
-        Sv_str = ', '.join(str(num) for num in Sv)
-        Cv_str = ', '.join(str(num) for num in Cv)
-        result_list.append([T, V, Fv_str, Fd_str, Sv_str, Cv_str])
-    result=np.array(result_list,dtype=object)
+        Fd = (9 / 8) * kB_j * D + kB_j * T * (3 * np.log(1 - np.exp(-D / T)) - debye_function(D / T))
+        Fv = E0 + (9 / 8) * kB_j * D + kB_j * T * (3 * np.log(1 - np.exp(-D / T)) - debye_function(D / T))
+        Sv = kB_j * (-3 * np.log(1 - np.exp(-D / T)) + 4 * debye_function(D / T)) * 96450
+        Cv = 9 * kB_j * (T / D) ** 3 * debye_cv_function(D / T) * 96450
+
+        # Calculate dVdT and CTE
+        if idx == 0:
+            CTE = 0  # Set the first CTE value to 0
+        else:
+            dVdT = (V - previous_V) / (T - previous_T)
+            CTE = dVdT / V
+
+        previous_V = V
+        previous_T = T
+
+        result_list.append([T, V, float(Fv), float(Fd), float(Sv), float(Cv), CTE])
+
+    result = np.array(result_list, dtype=object)
     return result
 
 best_par, m_volume, m_energy, volume, energy, best_par_vf = fit_and_plot("curvefit.txt")
 pfit, perr = fit_curvefit(volume, energy)
 result=calculate_Fvib("curvefit.txt")
-df = pd.DataFrame(np.array(result), columns=['T', 'V', 'Fv', 'Fd', 'Sv', 'Cv'])
+df = pd.DataFrame(np.array(result), columns=['T', 'V', 'Fv', 'Fd', 'Sv', 'Cv', 'CTE'])
 df.to_csv('Thermal.csv', index=False)
 result_final=pd.read_csv('Thermal.csv')
 T=result_final['T'].to_list()
@@ -334,8 +350,7 @@ V=result_final['V'].to_list()
 Fv=result_final['Fv'].to_list()
 Sv=result_final['Sv'].to_list()
 Cv=result_final['Cv'].to_list()
-dVdT = cal_deriv(T, V)
-CTE = [dVdT[i] / V[i] for i in range(len(V))]
+CTE=result_final['CTE'].to_list()
 fig, axs = plt.subplots(2, 3, figsize=(10, 8))
 fig.tight_layout(pad=4.0)
 
@@ -392,6 +407,8 @@ axs[0, 2].legend(frameon=False)
 axs[1, 0].legend(frameon=False)
 axs[1, 1].legend(frameon=False)
 axs[1, 1].legend(frameon=False)
+
+plt.show()
 plt.savefig('E-V_Debye.png', format='png', dpi=330)
 
 print("\n# Fit parameters and parameter errors from curve_fit method :")
