@@ -117,7 +117,7 @@ def read_data(filename):
         3.83 142.8300 -105.954437
         3.84 143.5800 -105.949877
     """
-    data = np.loadtxt("curvefit.txt")     
+    data = np.loadtxt(filename)     
     return data[:,1], data[:,2] 
 def eos_murnaghan(vol, E0, B0, BP, V0):
     # First term in the equation
@@ -180,11 +180,11 @@ def fit_and_plot(filename):
                        best_par[0].reshape(-1, 1),
                        best_par[1].reshape(-1, 1),
                        best_par[2].reshape(-1, 1)), axis=1)
-    np.savetxt('out_eosres.txt', data, delimiter=' ', fmt='%s')
+    #np.savetxt('out_eosres.txt', data, delimiter=' ', fmt='%s')
     # generated the Murnaghan model based on the fitted parameters
     m_volume = np.linspace(volume.min(), volume.max(), 550) 
     m_energy = eos_murnaghan(m_volume, *best_par) 
-    Data = np.loadtxt("curvefit.txt") 
+    Data = np.loadtxt(filename) 
     # plot the E-V curve
     V=np.array(Data[:,1])
     E0=np.array(best_par[0])
@@ -228,7 +228,7 @@ def fit_and_plot(filename):
     #pd.DataFrame(np.concatenate((V.reshape(-1,1), E.reshape(-1,1), B0.reshape(-1,1), BP.reshape(-1,1), B2P.reshape(-1,1),P.reshape(-1,1)),axis=1)).to_csv('E-V_fit.csv')
     best_par_vf=np.array(best_par_vf_list)
     return best_par, m_volume, m_energy, volume, energy, best_par_vf
-def fit_curvefit(volume, energy):
+def fit_curvefit(volume, energy,filename):
     """
     Note: As per the current documentation (Scipy V1.1.0), sigma (yerr) must be:
         None or M-length sequence or MxM array, optional
@@ -238,7 +238,7 @@ def fit_curvefit(volume, energy):
         err_stdev = [0.2 for item in xdata]
     Or similar, to create an M-length sequence for this example.
     """
-    volume, energy = read_data("curvefit.txt") 
+    volume, energy = read_data(filename) 
     # fitting with Quadratic first and then get the guess parameters.
     p_coefs = np.polyfit(volume, energy, 2)
     # the lowest point of parabola dE/dV = 0 ( p_coefs = [c,b,a] ) V(min) = -b/2a
@@ -333,84 +333,89 @@ def calculate_Fvib(filename):
 
         previous_V = V
         previous_T = T
+        density=average_mass_per_atom*1.66054/V
 
-        result_list.append([T, V, float(Fv), float(Fd), float(Sv), float(Cv), CTE])
+        result_list.append([T, V, float(Fv), float(Fd), float(Sv), float(Cv), CTE, density])
 
     result = np.array(result_list, dtype=object)
     return result
 
-best_par, m_volume, m_energy, volume, energy, best_par_vf = fit_and_plot("curvefit.txt")
-pfit, perr = fit_curvefit(volume, energy)
-result=calculate_Fvib("curvefit.txt")
-df = pd.DataFrame(np.array(result), columns=['T', 'V', 'Fv', 'Fd', 'Sv', 'Cv', 'CTE'])
-df.to_csv('Thermal.csv', index=False)
-result_final=pd.read_csv('Thermal.csv')
-T=result_final['T'].to_list()
-V=result_final['V'].to_list()
-Fv=result_final['Fv'].to_list()
-Sv=result_final['Sv'].to_list()
-Cv=result_final['Cv'].to_list()
-CTE=result_final['CTE'].to_list()
-fig, axs = plt.subplots(2, 3, figsize=(10, 8))
-fig.tight_layout(pad=4.0)
+num_files = 8
+filenames = [f"curvefit{i}.txt" for i in range(1, num_files+1)]
 
-# Plot E-V curve
-axs[0, 0].plot(volume, energy, 'o', fillstyle='none', color='black',markersize=15)
-axs[0, 0].plot(m_volume, m_energy, '-r', linewidth=3)
-axs[0, 0].set_xlabel(r"Volume [$\rm{A}^3$]",fontsize=10)
-axs[0, 0].set_ylabel(r"Energy [$\rm{eV}$]",fontsize=10)
-axs[0, 0].tick_params(labelsize=10)
-axs[0, 0].tick_params(axis='x', labelsize=10)
-axs[0, 0].tick_params(axis='y', labelsize=10)
-
-# Plot T vs Vcte
-axs[0, 1].plot(T, V, '-g', label='Vcte', linewidth=3)
-axs[0, 1].set_xlabel("Temperature (K)", fontsize=12)
-axs[0, 1].set_ylabel("Volume expansion (A3)", fontsize=12)
-axs[0, 1].tick_params(labelsize=10)
-axs[0, 1].tick_params(axis='x', labelsize=10)
-axs[0, 1].tick_params(axis='y', labelsize=10)
-
-# Plot T vs Fv
-axs[0, 2].plot(T, Fv, '-g', label='Fv', linewidth=3)
-axs[0, 2].set_xlabel("Temperature (K)", fontsize=12)
-axs[0, 2].set_ylabel("Free energy (eV/atom)", fontsize=12)
-axs[0, 2].tick_params(labelsize=10)
-axs[0, 2].tick_params(axis='x', labelsize=10)
-axs[0, 2].tick_params(axis='y', labelsize=10)
-
-# Plot T vs Svib
-axs[1, 0].plot(T, Sv, '-b', label='Svib', linewidth=3)
-axs[1, 0].set_xlabel("Temperature (K)", fontsize=12)
-axs[1, 0].set_ylabel("Svib (J/K)", fontsize=12)
-axs[1, 0].tick_params(labelsize=10)
-axs[1, 0].tick_params(axis='x', labelsize=10)
-axs[1, 0].tick_params(axis='y', labelsize=10)
-
-# Plot T vs Cvib
-axs[1, 1].plot(T, Cv, '-m', label='Cvib', linewidth=3)
-axs[1, 1].set_xlabel("Temperature (K)", fontsize=12)
-axs[1, 1].set_ylabel("Cvib(J/K)", fontsize=12)
-axs[1, 1].tick_params(labelsize=10)
-axs[1, 1].tick_params(axis='x', labelsize=10)
-axs[1, 1].tick_params(axis='y', labelsize=10)
-
-# Plot T vs CTE
-axs[1, 2].plot(T, CTE, '-b', label='CTE', linewidth=3)
-axs[1, 2].set_xlabel("Temperature (K)", fontsize=12)
-axs[1, 2].set_ylabel("CTE (1/K)", fontsize=12)
-axs[1, 2].tick_params(labelsize=10)
-
-axs[0, 0].legend(frameon=False)
-axs[0, 1].legend(frameon=False)
-axs[0, 2].legend(frameon=False)
-axs[1, 0].legend(frameon=False)
-axs[1, 1].legend(frameon=False)
-axs[1, 1].legend(frameon=False)
-
-plt.show()
-plt.savefig('E-V_Debye.png', format='png', dpi=330)
-
-print("\n# Fit parameters and parameter errors from curve_fit method :")
-print("pfit = ", pfit)
-print("perr = ", perr)
+for i, filename in enumerate(filenames, start=1):
+    print(f"\nProcessing file: {filename}")
+    
+    # 1. Fit and calculate thermodynamic parameters
+    best_par, m_volume, m_energy, volume, energy, best_par_vf = fit_and_plot(filename)
+    pfit, perr = fit_curvefit(volume, energy, filename)
+    result = calculate_Fvib(filename)
+    
+    # 2. Save the calculation results into a CSV file, named Thermal_$i.csv
+    df = pd.DataFrame(np.array(result), columns=['T', 'V', 'Fv', 'Fd', 'Sv', 'Cv', 'CTE', 'density'])
+    csv_filename = f"Thermal_{i}.csv"
+    df.to_csv(csv_filename, index=False)
+    
+    # 3. Read the CSV file to obtain the data lists
+    result_final = pd.read_csv(csv_filename)
+    T = result_final['T'].to_list()
+    V = result_final['V'].to_list()
+    Fv = result_final['Fv'].to_list()
+    Sv = result_final['Sv'].to_list()
+    Cv = result_final['Cv'].to_list()
+    CTE = result_final['CTE'].to_list()
+    
+    # 4. Plotting: Draw the E-V curve and various temperature-dependent properties
+    fig, axs = plt.subplots(2, 3, figsize=(10, 8))
+    fig.tight_layout(pad=4.0)
+    
+    # E-V curve
+    axs[0, 0].plot(volume, energy, 'o', fillstyle='none', color='black', markersize=15)
+    axs[0, 0].plot(m_volume, m_energy, '-r', linewidth=3)
+    axs[0, 0].set_xlabel(r"Volume [$\rm{A}^3$]", fontsize=10)
+    axs[0, 0].set_ylabel(r"Energy [$\rm{eV}$]", fontsize=10)
+    axs[0, 0].tick_params(labelsize=10)
+    
+    # Temperature vs. Volume expansion (Vcte)
+    axs[0, 1].plot(T, V, '-g', label='Vcte', linewidth=3)
+    axs[0, 1].set_xlabel("Temperature (K)", fontsize=12)
+    axs[0, 1].set_ylabel("Volume expansion (A^3)", fontsize=12)
+    axs[0, 1].tick_params(labelsize=10)
+    
+    # Temperature vs. Free energy
+    axs[0, 2].plot(T, Fv, '-g', label='Fv', linewidth=3)
+    axs[0, 2].set_xlabel("Temperature (K)", fontsize=12)
+    axs[0, 2].set_ylabel("Free energy (eV/atom)", fontsize=12)
+    axs[0, 2].tick_params(labelsize=10)
+    
+    # Temperature vs. Svib
+    axs[1, 0].plot(T, Sv, '-b', label='Svib', linewidth=3)
+    axs[1, 0].set_xlabel("Temperature (K)", fontsize=12)
+    axs[1, 0].set_ylabel("Svib (J/K)", fontsize=12)
+    axs[1, 0].tick_params(labelsize=10)
+    
+    # Temperature vs. Cvib
+    axs[1, 1].plot(T, Cv, '-m', label='Cvib', linewidth=3)
+    axs[1, 1].set_xlabel("Temperature (K)", fontsize=12)
+    axs[1, 1].set_ylabel("Cvib (J/K)", fontsize=12)
+    axs[1, 1].tick_params(labelsize=10)
+    
+    # Temperature vs. CTE
+    axs[1, 2].plot(T, CTE, '-b', label='CTE', linewidth=3)
+    axs[1, 2].set_xlabel("Temperature (K)", fontsize=12)
+    axs[1, 2].set_ylabel("CTE (1/K)", fontsize=12)
+    axs[1, 2].tick_params(labelsize=10)
+    
+    # Add legends to all subplots
+    for ax in axs.flat:
+        ax.legend(frameon=False)
+    
+    # 5. Save the plot as E-V_Debye_$i.png
+    fig_filename = f"E-V_Debye_{i}.png"
+    plt.savefig(fig_filename, format='png', dpi=330)
+    plt.close(fig)
+    
+    # 6. Output the fit parameters and their errors for the current file
+    print(f"# Fit parameters and parameter errors for {filename}:")
+    print("pfit =", pfit)
+    print("perr =", perr)
