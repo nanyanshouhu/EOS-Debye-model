@@ -1,5 +1,5 @@
 # EOS-Debye-model
-Put these three files ("curvefit.txt", "curvefit_Debye.py" and "POSCAR") in the same director
+Put all these files in the same folder
 
 
 run the command "python curvefit_Debye.py"
@@ -10,4 +10,4 @@ you will get the thermodynamic properties of the material based on the EOS-Debye
 
 the result will be outputed in the csv.file
 
-V: volume, Fv: free energy (E+Fvib), Fd: the absolute value of Fvib, Sv: entropy, Cv: heat capacity 
+V: volume, Fv: free energy (E+Fvib), Fd: the absolute value of Fvib, Sv: entropy, Cv: heat capacity , CTE, and density
